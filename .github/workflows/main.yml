@@ -1,0 +1,43 @@
+name: CI/CD Pipeline for Taskify
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run lint
+      run: npm run lint
+
+    - name: Run tests
+      run: npm test -- --watchAll=false  # Disable watch mode for CI
+
+    - name: Build
+      run: npm run build
+
+  deploy:
+    needs: build-and-test  # Only deploy if tests/build pass
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only on main branch pushes
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Deploy to Vercel
+      run: curl -X POST ${{ secrets.VERCEL_DEPLOY_HOOK }}
